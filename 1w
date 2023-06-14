@@ -1,0 +1,84 @@
+import logging
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
+
+# Включаем логирование для получения информации о работе бота
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                     level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+# Словарь для хранения выбранных кнопок
+selected_buttons = {}
+
+# Определяем функцию-обработчик для команды /start
+def start(update, context):
+    keyboard = [[InlineKeyboardButton("Кнопка 1", callback_data='button1'),
+                 InlineKeyboardButton("Кнопка 2", callback_data='button2'),
+                 InlineKeyboardButton("Кнопка 3", callback_data='button3')]]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Выберите кнопку:', reply_markup=reply_markup)
+
+# Определяем функцию-обработчик для нажатия на кнопку
+def button_click(update, context):
+    query = update.callback_query
+    selected_button = query.data
+
+    if selected_button == 'button1':
+        context.bot.send_message(chat_id=query.message.chat_id, text='Вы выбрали Кнопку 1.')
+        context.bot.send_message(chat_id=query.message.chat_id, text='Выберите новую кнопку или нажмите /start.')
+    elif selected_button == 'button2':
+        context.bot.send_message(chat_id=query.message.chat_id, text='Вы выбрали Кнопку 2.')
+        context.bot.send_message(chat_id=query.message.chat_id, text='Выберите новую кнопку или нажмите /start.')
+    elif selected_button == 'button3':
+        context.bot.send_message(chat_id=query.message.chat_id, text='Вы выбрали Кнопку 3.')
+        context.bot.send_message(chat_id=query.message.chat_id, text='Выберите новую кнопку или нажмите /start.')
+
+    selected_buttons[query.message.chat_id] = selected_button
+
+# Определяем функцию-обработчик для команды /cancel
+def cancel(update, context):
+    chat_id = update.message.chat_id
+    if chat_id in selected_buttons:
+        selected_button = selected_buttons[chat_id]
+        del selected_buttons[chat_id]
+        context.bot.send_message(chat_id=chat_id, text=f'Выбор "{selected_button}" отменен.')
+    else:
+        context.bot.send_message(chat_id=chat_id, text='Нет активного выбора.')
+
+# Определяем функцию-обработчик для неизвестных команд
+def unknown(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id, text='Неизвестная команда.')
+
+def main():
+    # Создаем экземпляр Updater и передаем ему токен вашего бота
+    updater = Updater(token='YOUR_BOT_TOKEN', use_context=True)
+
+    # Получаем экземпляр диспетчера для регистрации обработчиков
+    dispatcher = updater.dispatcher
+
+    # Регистрируем обработчики команд
+    start_handler = CommandHandler('start', start)
+    dispatcher.add_handler(start_handler)
+
+    cancel_handler = CommandHandler('cancel', cancel)
+    dispatcher.add_handler(cancel_handler)
+
+    # Регистрируем обработчик для нажатия на кнопку
+    button_handler = CallbackQueryHandler(button_click)
+    dispatcher.add_handler(button_handler)
+
+    # Регистрируем обработчик для неизвестных команд
+    unknown_handler = MessageHandler(~Filters.command, unknown)
+    dispatcher.add_handler(unknown_handler)
+
+    # Запускаем бота
+    updater.start_polling()
+
+    # Останавливаем бота при получении сигнала остановки (например, нажатии Ctrl+C)
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
